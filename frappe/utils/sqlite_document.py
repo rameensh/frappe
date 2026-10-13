@@ -96,7 +96,9 @@ class SQLiteLogDocument(Document):
 
 		`Document.db_set` goes through `frappe.db.set_value`, which targets the primary
 		database -- where a log DocType has no table. The field handling, `modified` bump and
-		`before_change` / `on_change` hooks are kept identical; only the UPDATE moves.
+		`on_change` hook are kept identical; only the UPDATE moves. `before_change` is not
+		run: it fires to notify on a value change, and nothing subscribes to that for a log
+		DocType.
 
 		`commit` is accepted for signature compatibility but ignored: the log connection is
 		committed here regardless, and committing the primary transaction is not this
@@ -111,10 +113,9 @@ class SQLiteLogDocument(Document):
 			self.set("modified", frappe.utils.now())
 			self.set("modified_by", frappe.session.user)
 
+		# Kept despite `before_change` being gone: `on_change` below may still read it.
 		if not self.get_doc_before_save():
 			self.load_doc_before_save()
-
-		self.run_method("before_change")
 
 		if self.name is None:
 			return
